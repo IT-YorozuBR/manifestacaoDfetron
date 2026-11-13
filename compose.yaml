@@ -1,0 +1,39 @@
+# Uma única instância: a trava de sincronização é local ao processo.
+services:
+  nfe-consulta:
+    build: .
+    image: atlasdfe:2.7.5
+    restart: unless-stopped
+    # Publicado na rede da VM, sem HTTPS: restrinja por firewall/VPN a uma rede confiável.
+    ports:
+      - "8080:8080"
+    environment:
+      NFE_WEB_ENV: production
+      # O proxy chega por outro IP da rede Docker; a porta acima só aceita conexões locais.
+      NFE_WEB_FORWARDED_ALLOW_IPS: "*"
+      # Login por contas locais (sem isso o app não exige login e todos são admin).
+      NFE_WEB_LOCAL_AUTH: "1"
+      NFE_AUTO_SYNC_ENABLED: "1"
+      NFE_AUTO_SYNC_WEEKDAYS: "0,1,2,3,4,5,6"
+      # Recuperação consNSU: mantenha desligada até validar com a SEFAZ (padrão do aplicativo).
+      NFE_RECOVERY_ENABLED: "0"
+      NFE_ADMIN_SESSION_MINUTES: "30"
+      TZ: America/Sao_Paulo
+      # Conta inicial (usada só se dados/admin_accounts.db ainda não existir).
+      # Defina em um arquivo .env ao lado deste, e remova depois do primeiro acesso.
+      NFE_BOOTSTRAP_ADMIN_USER: ${NFE_BOOTSTRAP_ADMIN_USER:-admin}
+      NFE_BOOTSTRAP_ADMIN_PASSWORD: ${NFE_BOOTSTRAP_ADMIN_PASSWORD:-}
+      # Alertas por e-mail (opcional; a senha SMTP vai em secrets/smtp-password.txt).
+      # NFE_SMTP_HOST: smtp.exemplo.com
+      # NFE_SMTP_FROM: nfe@exemplo.com
+    volumes:
+      - dados:/app/dados
+      - secrets:/app/secrets
+      - logs:/app/logs
+      # Certificado A1 (.pfx) somente leitura; informe /certificados/arquivo.pfx em Atualizar.
+      - ./certificados:/certificados:ro
+
+volumes:
+  dados:
+  secrets:
+  logs:
